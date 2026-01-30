@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      N8N_HOST: ${N8N_DOMAIN}
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://${N8N_DOMAIN}
+      GENERIC_TIMEZONE: America/Sao_Paulo
+
+      N8N_BASIC_AUTH_ACTIVE: true
+      N8N_BASIC_AUTH_USER: ${N8N_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASS}
+
+      N8N_LOG_LEVEL: info
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - internal
+  
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+  waha_data:
+
+networks:
+  internal:
+    driver: bridge
