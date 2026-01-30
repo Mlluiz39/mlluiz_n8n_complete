@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   postgres:
     image: postgres:15
@@ -7,6 +9,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: America/Sao_Paulo
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -21,11 +24,15 @@ services:
       - redis_data:/data
     networks:
       - internal
+    environment:
+      TZ: America/Sao_Paulo
 
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n
     restart: always
+    ports:
+      - "5678:5678"
     environment:
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
@@ -33,19 +40,16 @@ services:
       DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
       DB_POSTGRESDB_USER: ${POSTGRES_USER}
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
-
       QUEUE_BULL_REDIS_HOST: redis
       QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD}
-
-      N8N_HOST: ${N8N_DOMAIN}
-      N8N_PROTOCOL: https
-      WEBHOOK_URL: https://${N8N_DOMAIN}
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://${N8N_DOMAIN}
       GENERIC_TIMEZONE: America/Sao_Paulo
-
+      TZ: America/Sao_Paulo
       N8N_BASIC_AUTH_ACTIVE: true
       N8N_BASIC_AUTH_USER: ${N8N_USER}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_PASS}
-
       N8N_LOG_LEVEL: info
     depends_on:
       - postgres
@@ -54,12 +58,28 @@ services:
       - n8n_data:/home/node/.n8n
     networks:
       - internal
-  
+
+  ngrok:
+    container_name: ngrok
+    image: ngrok/ngrok:latest
+    restart: always
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_TOKEN}
+      TZ: America/Sao_Paulo
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    networks:
+      - internal
+
 volumes:
   postgres_data:
   redis_data:
   n8n_data:
-  waha_data:
 
 networks:
   internal:
